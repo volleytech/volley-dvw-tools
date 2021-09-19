@@ -70,7 +70,7 @@ def get_verbose_service_codes(file_input):
                     service_codes[length - 1] = (service_codes[length - 1][0], code)
     return service_codes
 
-def merge(service_codes, file_input):
+def merge(service_codes, file_input, line_number):
     """Merge the verbose codes into the file that contains skeleton
     codes.
 
@@ -81,6 +81,8 @@ def merge(service_codes, file_input):
         respective reception code.
     file_input : str
         The skeleton dvw file to update.
+    line_number : int
+        The line number to start the merge.
 
     Returns
     -------
@@ -91,7 +93,14 @@ def merge(service_codes, file_input):
     # Let's read in each line of the dvw file to update.
     with fileinput.FileInput(files=file_input, inplace = 1, backup = '.bak') as f:
         index = 0
+        current_line = 0
         for line in f:
+            current_line += 1
+            # If a line number has been supplied as the starting point for a merge,
+            # let's print all existing lines until we hit it.
+            if line_number and current_line < line_number:
+                print(line.rstrip())
+                continue
             # Keep track of whether we've written the substituted reception line to the dvw file. If not,
             # we'll want to write the existing line.
             is_reception_substituted = False
@@ -141,6 +150,7 @@ def merge(service_codes, file_input):
 parser = argparse.ArgumentParser(description='Merge Volleymetrics .dvw files.')
 parser.add_argument('input', type=str, help='The .dvw file that should be updated to include merged codes.')
 parser.add_argument('-s', '--serve-codes', type=str, help='Specify the .dvw that contains the full serve codes.')
+parser.add_argument('-l', '--line-number', type=int, help='Specify the line number to start the merge.')
 args = parser.parse_args()
 
 # Because this is the only optional argument currently, we require it.
@@ -166,7 +176,7 @@ if not is_dvw_file(args.serve_codes):
 # TODO: Add support for full attack/block/dig codes.
 verbose_service_codes = get_verbose_service_codes(args.serve_codes)
 
-if merge(verbose_service_codes, args.input):
+if merge(verbose_service_codes, args.input, args.line_number):
     print("Successfully merged dvw files.")
 else:
     print("Failed to merge dvw files.")
